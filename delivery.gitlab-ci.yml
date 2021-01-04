@@ -1,0 +1,40 @@
+.delivery:
+  before_script:
+    - cd ..
+    - rm -rf ${CI_PROJECT_NAME}
+    - git clone https://gitlab-ci-token:${GITLAB_TOKEN}@gitlab.com/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}.git
+    - cd ${CI_PROJECT_NAME}
+    - git config user.email "luc.aucoin1998@gmail.com"
+    - git config user.name "Luc-AUCOIN"
+
+.delivery-changelog:
+  extends: .delivery
+  stage: changelog
+  only:
+    variables:
+      - $RELEASE
+  variables:
+    GITLAB_CI_COMMONS: gitlab-ci--commons
+  script:
+    - cd ..
+    - rm -rf ${GITLAB_CI_COMMONS}
+    - git clone -b master --single-branch https://gitlab-ci-token:${GITLAB_TOKEN}@gitlab.com/${CI_PROJECT_NAMESPACE}/${GITLAB_CI_COMMONS}.git
+    - cd ${CI_PROJECT_NAME}
+    - echo "Checking Changelog"
+    - ../gitlab-ci--commons/resources/changelog/changelog.sh
+
+.delivery-release:
+  extends: .delivery
+  stage: release
+  only:
+    variables:
+      - $RELEASE
+  rules:
+    - changes:
+        - CHANGELOG.md
+  script:
+    - git checkout master
+    - git merge develop
+    - git tag ${RELEASE}
+    - git push origin ${RELEASE}
+    - git push
