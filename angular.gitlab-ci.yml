@@ -1,23 +1,47 @@
 .angular-build-dev:
-  image: node:stable
-  stage: build
+  image: node:latest
   before_script:
     - npm config set depth 0
     - npm cache clean --force
   script:
     - npm install --no-progress
-    - if [ -d "build" ]; then rm -rf build; fi
-    - if [ -d "dist" ]; then rm -rf dist; fi
     - node_modules/.bin/ng build --aot --build-optimizer
+    - cp src/404.html dist/
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 2 hours
+  cache:
+    paths:
+      - node_modules/
 
 .angular-build-prod:
-  image: node:stable
-  stage: build
+  image: node:latest
   before_script:
     - npm config set depth 0
     - npm cache clean --force
   script:
     - npm install --no-progress
-    - if [ -d "build" ]; then rm -rf build; fi
-    - if [ -d "dist" ]; then rm -rf dist; fi
     - node_modules/.bin/ng build --prod --aot --build-optimizer
+    - cp src/404.html dist/
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 2 hours
+  cache:
+    paths:
+      - node_modules/
+
+.angular-release:
+  image: node:latest
+  before_script:
+    - cd ..
+    - rm -rf ${CI_PROJECT_NAME}
+    - git clone https://gitlab-ci-token:${GITLAB_TOKEN}@gitlab.com/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}.git
+    - cd ${CI_PROJECT_NAME}
+    - git config --global user.email ${GITLAB_USER_EMAIL}
+    - git config --global user.name "Service account"
+  script:
+    - git checkout master
+    - git merge -Xtheirs develop
+    - npx release-it --ci ${RELEASE}
