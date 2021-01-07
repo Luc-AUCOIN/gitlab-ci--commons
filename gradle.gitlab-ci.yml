@@ -1,0 +1,30 @@
+.gradle:
+  before_script:
+    - export GRADLE_HOME=`pwd`/.gradle
+
+.gradle-build:
+  image: gradle:latest
+  extends: .gradle
+  script:
+    - gradle clean build
+  artifacts:
+    paths:
+      - build/libs/*.jar
+    expire_in: 2 hours
+
+.gradle-release:
+  image: gradle:latest
+  extends: .gradle
+  before_script:
+    - cd ..
+    - rm -rf ${CI_PROJECT_NAME}
+    - git clone https://gitlab-ci-token:${GITLAB_TOKEN}@gitlab.com/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}.git
+    - cd ${CI_PROJECT_NAME}
+    - git config --global user.email ${GITLAB_USER_EMAIL}
+    - git config --global user.name "Service account"
+  script:
+    - gradle release -Prelease.useAutomaticVersion=true -Prelease.releaseVersion=${RELEASE}
+    - git checkout master
+    - git merge -Xtheirs develop
+    - git push
+
